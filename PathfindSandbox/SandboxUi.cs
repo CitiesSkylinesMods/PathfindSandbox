@@ -8,21 +8,22 @@ using UnityEngine;
 
 namespace PathfindSandbox {
     public class SandboxUi : MonoBehaviour {
-
         public static SandboxUi Instance { get; set; }
 
         private static int _popupId = 10;
+
         //delegate based variable content
         private Window _currentWindow = MainWindow;
-        
-        private static Rect _mainWindowPos = new Rect(50, 50, 150, 100);
+
+        private const int MinMainWindowHeight = 100;
+        private static Rect _mainWindowPos = new Rect(50, 50, 150, MinMainWindowHeight);
 
         private static List<PopupWindow> _popupWindows = new List<PopupWindow>();
-        
+
         //todo: add buttons to remove/destroy entities
         private static List<uint> _citizens = new List<uint>();
         private static List<ushort> _vehicles = new List<ushort>();
-        
+
         public void OnGUI() {
             _currentWindow?.Invoke();
 
@@ -41,27 +42,47 @@ namespace PathfindSandbox {
             }
         }
 
-        public static void MainWindow() {
+        private static void MainWindow() {
+            _mainWindowPos = GUILayout.Window(1, _mainWindowPos, MainWindowFunction, "Pathfind Sandbox", GUILayout.Height(MinMainWindowHeight));
+        }
 
-            _mainWindowPos = GUI.Window(1, _mainWindowPos, (id) => {
-                if (GUI.Button(new Rect(10, 25, 130, 20), "Spawn Cim")) {
-                    PopupWindow popupWindow = SpawnCimPopup();
-                    _popupWindows.Add(popupWindow);
+        private static void MainWindowFunction(int id) {
+            GUI.DragWindow(new Rect(0, 0, 150, 20));
+            GUILayout.BeginVertical();
+
+            if (GUILayout.Button("Spawn Cim", GUILayout.Width(130), GUILayout.Height(20))) {
+                PopupWindow popupWindow = SpawnCimPopup();
+                _popupWindows.Add(popupWindow);
+            }
+
+            if (GUILayout.Button("Spawn Cargo Truck", GUILayout.Width(130), GUILayout.Height(20))) {
+                PopupWindow popupWindow = SpawnCargoVehiclePopup();
+                _popupWindows.Add(popupWindow);
+            }
+
+
+            if (GUILayout.Button("Spawn Cim Vehicle", GUILayout.Width(130), GUILayout.Height(20))) {
+                PopupWindow popupWindow = SpawnPassengerVehiclePopup();
+                _popupWindows.Add(popupWindow);
+            }
+
+            if (_citizens.Count > 0 && GUILayout.Button("Remove Citizens", GUILayout.Width(130), GUILayout.Height(20))) {
+                foreach (uint citizen in _citizens) {
+                    CitizenManager.instance.ReleaseCitizen(citizen);
                 }
 
-                if (GUI.Button(new Rect(10, 50, 130, 20), "Spawn Cargo Truck")) {
-                    PopupWindow popupWindow = SpawnCargoVehiclePopup();
-                    _popupWindows.Add(popupWindow);
+                _citizens.Clear();
+            }
+
+            if (_vehicles.Count > 0 && GUILayout.Button("Remove Vehicles", GUILayout.Width(130), GUILayout.Height(20))) {
+                foreach (ushort vehicle in _vehicles) {
+                    VehicleManager.instance.ReleaseVehicle(vehicle);
                 }
 
+                _vehicles.Clear();
+            }
 
-                if (GUI.Button(new Rect(10, 75, 130, 20), "Spawn Cim Vehicle")) {
-                    PopupWindow popupWindow = SpawnPassengerVehiclePopup();
-                    _popupWindows.Add(popupWindow);
-                }
-
-                GUI.DragWindow(new Rect(0, 0, 150, 20));
-            }, "Pathfind Sandbox");
+            GUILayout.EndVertical();
         }
 
         private static PopupWindow SpawnPassengerVehiclePopup() {
@@ -236,7 +257,7 @@ namespace PathfindSandbox {
             MethodInfo methodInfo = typeof(PassengerCarAI).GetMethod("StartPathFind",
                 BindingFlags.NonPublic | BindingFlags.Instance,
                 Type.DefaultBinder,
-                new [] {
+                new[] {
                     typeof(ushort),
                     typeof(Vehicle).MakeByRefType(),
                     typeof(Vector3),

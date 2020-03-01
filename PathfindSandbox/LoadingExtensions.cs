@@ -4,9 +4,13 @@ using UnityEngine.SceneManagement;
 
 namespace PathfindSandbox {
     public class LoadingExtensions : ILoadingExtension {
+
+        // public static AppMode? CurrentMode = SimulationManager.instance.m_ManagersWrapper?.loading.currentMode;
+        public static bool GameLoaded { get; set; }
+        
         public void OnCreated(ILoading loading) {
             Debug.Log("PfS: OnCreated");
-            if (SceneManager.GetActiveScene().name.Equals("Game")) {
+            if (LoadingManager.instance.m_loadingComplete) {
                 Debug.Log("PfS: Hot-Reloading");
                 InitUi();
             }
@@ -15,7 +19,7 @@ namespace PathfindSandbox {
         public void OnReleased() {
             Debug.Log("PfS: Released");
             if (SandboxUi.Instance) {
-                GameObject.Destroy(SandboxUi.Instance);
+                GameObject.Destroy(SandboxUi.Instance.gameObject);
                 SandboxUi.Instance = null;
             }
         }
@@ -23,22 +27,22 @@ namespace PathfindSandbox {
         public void OnLevelLoaded(LoadMode mode) {
             Debug.Log("PfS: OnLevelLoaded");
             InitUi();
+            GameLoaded = true;
         }
 
         public void OnLevelUnloading() {
             Debug.Log("PfS: OnLevelUnloading");
             if (SandboxUi.Instance) {
-                GameObject.Destroy(SandboxUi.Instance);
+                GameObject.Destroy(SandboxUi.Instance.gameObject);
                 SandboxUi.Instance = null;
             }
         }
 
         private void InitUi() {
-            if (SandboxUi.Instance) {
-                Object.Destroy(SandboxUi.Instance);
-                SandboxUi.Instance = null;
+            if (SandboxUi.Instance == null) {
+                Debug.Log("PfS: Initializing UI");
+                SandboxUi.Instance = new GameObject("PF_SandboxUI").AddComponent<SandboxUi>();
             }
-            SandboxUi.Instance = new GameObject("PF_SandboxUI").AddComponent<SandboxUi>();
         }
     }
 }
