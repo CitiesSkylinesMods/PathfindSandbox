@@ -35,7 +35,9 @@
     <Compile Include="LoadingExtensions.cs" />
     <Compile Include="PathfindSandbox.cs" />
     <Compile Include="Properties\AssemblyInfo.cs" />
-    <Compile Include="SandboxUi.cs" />
+    <Compile Include="UI\SandboxUi.cs" />
+    <Compile Include="UI\SelectionManager.cs" />
+    <Compile Include="UI\SimpleSelectionTool.cs" />
   </ItemGroup>
   <ItemGroup>
     <Reference Include="Assembly-CSharp, Version=0.0.0.0, Culture=neutral, PublicKeyToken=null">

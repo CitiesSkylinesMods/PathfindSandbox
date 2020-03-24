@@ -1,11 +1,11 @@
 using ICities;
+using PathfindSandbox.UI;
 using UnityEngine;
 using UnityEngine.SceneManagement;
 
 namespace PathfindSandbox {
     public class LoadingExtensions : ILoadingExtension {
 
-        // public static AppMode? CurrentMode = SimulationManager.instance.m_ManagersWrapper?.loading.currentMode;
         public static bool GameLoaded { get; set; }
         
         public void OnCreated(ILoading loading) {

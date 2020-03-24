@@ -6,7 +6,7 @@ using ColossalFramework;
 using ColossalFramework.Math;
 using UnityEngine;
 
-namespace PathfindSandbox {
+namespace PathfindSandbox.UI {
     public class SandboxUi : MonoBehaviour {
         public static SandboxUi Instance { get; set; }
 
@@ -20,11 +20,44 @@ namespace PathfindSandbox {
 
         private static List<PopupWindow> _popupWindows = new List<PopupWindow>();
 
-        //todo: add buttons to remove/destroy entities
         private static List<uint> _citizens = new List<uint>();
         private static List<ushort> _vehicles = new List<ushort>();
+        private static bool _selectionToolEnabled;
+
+        private static SimpleSelectionTool _simpleSelectionTool;
+
+        private static GUIStyle _focusedLabelStyle;
+        private static GUIStyle _defaultLabelStyle;
+        private bool _styleSet;
+
+        public void Awake() {
+            GameObject toolModControl = ToolsModifierControl.toolController.gameObject;
+            _simpleSelectionTool = toolModControl.GetComponent<SimpleSelectionTool>()
+                                   ?? toolModControl.AddComponent<SimpleSelectionTool>();
+        }
+
+        public void OnDestroy() {
+            Destroy(_simpleSelectionTool);
+        }
+
+        private static void EnableTool() {
+            ToolsModifierControl.toolController.CurrentTool = _simpleSelectionTool;
+            ToolsModifierControl.SetTool<SimpleSelectionTool>();
+        }
+
+        private static void DisableTool() {
+            if (ToolsModifierControl.toolController.CurrentTool == _simpleSelectionTool) {
+                ToolsModifierControl.toolController.CurrentTool = ToolsModifierControl.GetTool<DefaultTool>();
+                ToolsModifierControl.SetTool<DefaultTool>();
+            }
+        }
 
         public void OnGUI() {
+            if (!_styleSet) {
+                _focusedLabelStyle = new GUIStyle(GUI.skin.label) {normal = {textColor = Color.green}};
+                _defaultLabelStyle = new GUIStyle(GUI.skin.label);
+                _styleSet = true;
+            }
             _currentWindow?.Invoke();
 
             bool refreshPopups = false;
@@ -47,7 +80,16 @@ namespace PathfindSandbox {
         }
 
         private static void MainWindowFunction(int id) {
-            GUI.DragWindow(new Rect(0, 0, 150, 20));
+            GUI.DragWindow(new Rect(0, 0, 130, 20));
+            bool oldEnabled = _selectionToolEnabled;
+            _selectionToolEnabled = GUI.Toggle(new Rect(130, 0, 20, 20), _selectionToolEnabled, "");
+            if (!oldEnabled && _selectionToolEnabled) {
+                EnableTool();
+            } else if(oldEnabled && !_selectionToolEnabled) {
+                DisableTool();
+            }
+
+
             GUILayout.BeginVertical();
 
             if (GUILayout.Button("Spawn Cim", GUILayout.Width(130), GUILayout.Height(20))) {
@@ -83,6 +125,9 @@ namespace PathfindSandbox {
             }
 
             GUILayout.EndVertical();
+            if (Event.current.type == EventType.mouseUp) {
+                SelectionManager.Manager.ActivateWindow(-1, null);
+            }
         }
 
         private static PopupWindow SpawnPassengerVehiclePopup() {
@@ -92,7 +137,7 @@ namespace PathfindSandbox {
                 Position = new Rect(320, 75, 200, 100),
                 Data = new WindowData()
             };
-
+            SelectionManager.Manager.ActivateWindow(p.Id, p);
             p.RenderWindow = () => {
                 p.Position = GUI.Window(p.Id, p.Position, delegate(int id) {
                     GUI.DragWindow(new Rect(0, 0, 180, 20));
@@ -101,9 +146,9 @@ namespace PathfindSandbox {
                         return;
                     }
 
-                    GUI.Label(new Rect(15, 30, 20, 20), "Src.");
+                    GUI.Label(new Rect(15, 30, 20, 20), "Src.", p.Data.CurrentInput == 0 ? _focusedLabelStyle : _defaultLabelStyle);
                     p.Data.InputSrc = GUI.TextField(new Rect(40, 30, 60, 20), p.Data.InputSrc);
-                    GUI.Label(new Rect(15, 50, 20, 20), "Dst.");
+                    GUI.Label(new Rect(15, 50, 20, 20), "Dst.", p.Data.CurrentInput == 1 ? _focusedLabelStyle : _defaultLabelStyle);
                     p.Data.InputDst = GUI.TextField(new Rect(40, 50, 60, 20), p.Data.InputDst);
                     if (GUI.Button(new Rect(120, 30, 60, 40), "Spawn")) {
                         if (p.Data.ParseInputs(out ushort srcId, out ushort dstId)) {
@@ -113,6 +158,9 @@ namespace PathfindSandbox {
                     }
 
                     p.Data.IsNode = GUI.Toggle(new Rect(15, 70, 150, 20), p.Data.IsNode, "Target is Node");
+                    if (Event.current.button == 0 && Event.current.type == EventType.mouseUp) {
+                        SelectionManager.Manager.ActivateWindow(id, p);
+                    }
                 }, "Spawn Passenger Vehicle");
             };
             return p;
@@ -125,7 +173,7 @@ namespace PathfindSandbox {
                 Position = new Rect(310, 55, 200, 90),
                 Data = new WindowData()
             };
-
+            SelectionManager.Manager.ActivateWindow(p.Id, p);
             p.RenderWindow = () => {
                 p.Position = GUI.Window(p.Id, p.Position, delegate(int id) {
                     GUI.DragWindow(new Rect(0, 0, 180, 20));
@@ -134,15 +182,18 @@ namespace PathfindSandbox {
                         return;
                     }
 
-                    GUI.Label(new Rect(15, 30, 20, 20), "Src.");
+                    GUI.Label(new Rect(15, 30, 20, 20), "Src.", p.Data.CurrentInput == 0 ? _focusedLabelStyle : _defaultLabelStyle);
                     p.Data.InputSrc = GUI.TextField(new Rect(40, 30, 60, 20), p.Data.InputSrc);
-                    GUI.Label(new Rect(15, 50, 20, 20), "Dst.");
+                    GUI.Label(new Rect(15, 50, 20, 20), "Dst.", p.Data.CurrentInput == 1 ? _focusedLabelStyle : _defaultLabelStyle);
                     p.Data.InputDst = GUI.TextField(new Rect(40, 50, 60, 20), p.Data.InputDst);
                     if (GUI.Button(new Rect(120, 30, 60, 40), "Spawn")) {
                         if (p.Data.ParseInputs(out ushort srcId, out ushort dstId)) {
                             Debug.Log("PfS: Spawning cargo vehicle " + srcId + ", " + dstId);
                             SpawnCargoVehicle(srcId, dstId);
                         }
+                    }
+                    if (Event.current.button == 0 && Event.current.type == EventType.mouseUp) {
+                        SelectionManager.Manager.ActivateWindow(id, p);
                     }
                 }, "Spawn Cargo Vehicle");
             };
@@ -156,7 +207,7 @@ namespace PathfindSandbox {
                 Position = new Rect(300, 35, 200, 100),
                 Data = new WindowData()
             };
-
+            SelectionManager.Manager.ActivateWindow(p.Id, p);
             p.RenderWindow = () => {
                 p.Position = GUI.Window(p.Id, p.Position, delegate(int id) {
                     GUI.DragWindow(new Rect(0, 0, 180, 20));
@@ -180,6 +231,9 @@ namespace PathfindSandbox {
                     }
 
                     p.Data.IsNode = GUI.Toggle(new Rect(15, 70, 150, 20), p.Data.IsNode, "Target is Node");
+                    if (Event.current.button == 0 && Event.current.type == EventType.mouseUp) {
+                        SelectionManager.Manager.ActivateWindow(id, p);
+                    }
                 }, "Spawn Cim");
             };
             return p;
@@ -187,6 +241,7 @@ namespace PathfindSandbox {
 
         private static void ClosePopup(PopupWindow p) {
             p.Open = false;
+            SelectionManager.Manager.ActivateWindow(-1, null);
         }
 
         private static void SpawnCitizen(out uint citizenId) {
@@ -286,6 +341,7 @@ namespace PathfindSandbox {
         public string InputSrc = string.Empty;
         public string InputDst = string.Empty;
         public bool IsNode;
+        public ushort CurrentInput;
 
         public bool ParseInputs(out ushort srcId, out ushort dstId) {
             srcId = 0;
@@ -297,6 +353,23 @@ namespace PathfindSandbox {
             }
 
             return false;
+        }
+
+        public void UpdateInput(string value) {
+            if (CurrentInput == 0) {
+                InputSrc = value;
+                FocusNextInput();
+            } else {
+                InputDst = value;
+            }
+        }
+
+        public void FocusNextInput() {
+            CurrentInput = CurrentInput == 0 ? (ushort) 1 : (ushort) 0;
+        }
+
+        public void FocusPreviousInput() {
+            CurrentInput = CurrentInput == 0 ? (ushort) 1: (ushort) 0;
         }
     }
 
